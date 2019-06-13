@@ -16,12 +16,12 @@ use quick_protobuf::sizeofs::*;
 use super::*;
 
 #[derive(Debug, Default, PartialEq, Clone)]
-pub struct ChannelMessage<'a> {
+pub struct ChannelRowMessage<'a> {
     pub ids: Vec<i32>,
     pub serials: Vec<Cow<'a, str>>,
 }
 
-impl<'a> MessageRead<'a> for ChannelMessage<'a> {
+impl<'a> MessageRead<'a> for ChannelRowMessage<'a> {
     fn from_reader(r: &mut BytesReader, bytes: &'a [u8]) -> Result<Self> {
         let mut msg = Self::default();
         while !r.is_eof() {
@@ -36,7 +36,7 @@ impl<'a> MessageRead<'a> for ChannelMessage<'a> {
     }
 }
 
-impl<'a> MessageWrite for ChannelMessage<'a> {
+impl<'a> MessageWrite for ChannelRowMessage<'a> {
     fn get_size(&self) -> usize {
         0
         + if self.ids.is_empty() { 0 } else { 1 + sizeof_len(self.ids.iter().map(|s| sizeof_varint(*(s) as u64)).sum::<usize>()) }

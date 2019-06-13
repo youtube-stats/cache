@@ -4,7 +4,7 @@ extern crate quick_protobuf;
 extern crate rand;
 
 pub mod message;
-use message::ChannelMessage;
+use message::ChannelRowMessage;
 
 use crate::byteorder::ReadBytesExt;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream, TcpListener};
@@ -93,7 +93,7 @@ fn get_50(channels: &Vec<ChannelRow>, length: usize) -> Vec<ChannelRow> {
 pub fn get_msg(channels: &Vec<ChannelRow>, length: usize) -> Vec<u8> {
     let sampled: Vec<ChannelRow> = get_50(channels, length);
 
-    let mut message: ChannelMessage = ChannelMessage::default();
+    let mut message: ChannelRowMessage = ChannelRowMessage::default();
 
     for i in 0..50 {
         let row: &ChannelRow = &sampled[i];
