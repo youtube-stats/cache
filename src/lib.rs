@@ -9,6 +9,7 @@ pub mod message;
 use message::ChannelMessage;
 
 use std::borrow::Cow;
+use rand::thread_rng;
 
 static POSTGRESQL_URL: &'static str = "postgresql://admin@localhost:5432/youtube";
 static QUERY: &'static str = "SELECT id, serial FROM youtube.stats.channels";
@@ -16,7 +17,7 @@ static QUERY: &'static str = "SELECT id, serial FROM youtube.stats.channels";
 #[derive(Clone)]
 pub struct ChannelRow {
     pub id: i32,
-    pub serial: [u8; 24]
+    pub serial: String
 }
 
 #[derive(Clone)]
@@ -44,15 +45,6 @@ impl Channels {
         for row in &results {
             let id: i32 = row.get(0);
             let serial: String = row.get(1);
-            let serial: [u8; 24] = {
-                let chars: &[u8] = serial.as_bytes();
-                let mut serial: [u8; 24] = [0u8; 24];
-                for i in 0..24 {
-                    serial[i] = chars[i];
-                }
-
-                serial
-            };
 
             let value: ChannelRow = ChannelRow {
                 id,
@@ -77,8 +69,8 @@ impl Channels {
         &self.rows[i]
     }
 
-    fn get_50(self: &Channels, rng: &ThreadRng, length: usize) -> Channels {
-        let mut rng: ThreadRng = rng.clone();
+    fn get_50(self: &Channels, length: usize) -> Channels {
+        let mut rng: ThreadRng = thread_rng();
         let amount: usize = 50;
 
         let collect: &[ChannelRow] = &self.rows[..length];
@@ -92,8 +84,8 @@ impl Channels {
         }
     }
 
-    pub fn get_msg(self: &Channels, rng: &ThreadRng, length: usize) -> Vec<u8> {
-        let sampled: Channels = self.get_50(rng, length);
+    pub fn get_msg(self: &Channels, length: usize) -> Vec<u8> {
+        let sampled: Channels = self.get_50(length);
 
         let mut message: ChannelMessage = ChannelMessage::default();
 
