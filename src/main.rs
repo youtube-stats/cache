@@ -19,6 +19,8 @@ use rand::thread_rng;
 use rand::seq::SliceRandom;
 use std::borrow::Cow;
 use quick_protobuf::serialize_into_vec;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 #[derive(Clone, Debug)]
 pub struct ChannelRow {
@@ -27,6 +29,7 @@ pub struct ChannelRow {
 }
 
 static PORT: u16 = 3334u16;
+static SLEEP: u64 = 7200u64;
 static POSTGRESQL_URL: &'static str = "postgresql://admin@localhost:5432/youtube";
 static QUERY: &'static str = "SELECT id, serial FROM youtube.stats.channels";
 
@@ -100,20 +103,33 @@ pub fn get_msg(channels: &Vec<ChannelRow>, length: usize) -> Vec<u8> {
     }
 
     println!("Sending channel message {:?}", message);
-
-    let bytes: Vec<u8> = serialize_into_vec(&message)
-        .expect("Could not serialize");
-
-    bytes
+    serialize_into_vec(&message)
+        .expect("Could not serialize")
 }
 
 fn main() {
     println!("Starting cache service");
 
     let listener: TcpListener = listen();
-    let store: Vec<ChannelRow> = get_rows();
+    let channels1: Arc<Mutex<Vec<ChannelRow>>> = Arc::new(Mutex::new(get_rows()));
+    let channels2: Arc<Mutex<Vec<ChannelRow>>> = Arc::clone(&channels1);
+
+    spawn(move || {
+        let dur: Duration = std::time::Duration::from_secs(SLEEP);
+
+        loop {
+            println!("Will update channels in {} seconds", SLEEP);
+            std::thread::sleep(dur);
+            println!("Updating channels");
+
+            let channels = get_rows();
+            *channels1.lock().unwrap() = channels;
+        }
+    });
 
     for stream in listener.incoming() {
+        let channels: Arc<Mutex<Vec<ChannelRow>>> = Arc::clone(&channels2);
+
         spawn(move || {
             if stream.is_err() {
                 eprintln!("Connection is bad: {:?}", stream);
@@ -129,10 +145,11 @@ fn main() {
 
             let n: u32 = n_option.unwrap();
             println!("Got {}", n);
+            let length: usize = n as usize;
+            let channels: &Vec<ChannelRow> = &channels.lock().unwrap();
 
-            let buf: &'static str = "Hello world\n";
-            let mut buf: &[u8] = buf.as_bytes();
-
+            let buf: Vec<u8> = get_msg(channels, length);
+            let mut buf: &[u8] = buf.as_slice();
             stream.write_all(&mut buf).unwrap();
         });
     }
