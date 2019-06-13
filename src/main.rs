@@ -78,6 +78,11 @@ pub fn get_rows() -> Vec<ChannelRow> {
 fn get_50(channels: &Vec<ChannelRow>, length: usize) -> Vec<ChannelRow> {
     let mut rng: ThreadRng = thread_rng();
     let amount: usize = 50;
+    let length: usize = if length >= channels.len() {
+        channels.len() - 1
+    } else {
+        length
+    };
 
     let collect: &[ChannelRow] = &channels[..length];
     let collect: Vec<ChannelRow> = collect.to_vec();
