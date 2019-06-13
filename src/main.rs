@@ -3,6 +3,9 @@ extern crate postgres;
 extern crate quick_protobuf;
 extern crate rand;
 
+pub mod message;
+use message::ChannelMessage;
+
 use crate::byteorder::ReadBytesExt;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream, TcpListener};
 use std::io::Write;
@@ -11,6 +14,11 @@ use postgres::rows::Rows;
 use std::process::exit;
 use std::thread::spawn;
 use byteorder::LittleEndian;
+use rand::rngs::ThreadRng;
+use rand::thread_rng;
+use rand::seq::SliceRandom;
+use std::borrow::Cow;
+use quick_protobuf::serialize_into_vec;
 
 #[derive(Clone, Debug)]
 pub struct ChannelRow {
@@ -62,6 +70,41 @@ pub fn get_rows() -> Vec<ChannelRow> {
 
     println!("Retrieved {} rows", rows.len());
     rows
+}
+
+fn get_50(channels: &Vec<ChannelRow>, length: usize) -> Vec<ChannelRow> {
+    let mut rng: ThreadRng = thread_rng();
+    let amount: usize = 50;
+
+    let collect: &[ChannelRow] = &channels[..length];
+    let collect: Vec<ChannelRow> = collect.to_vec();
+
+    collect.choose_multiple(&mut rng, amount).cloned().collect()
+}
+
+pub fn get_msg(channels: &Vec<ChannelRow>, length: usize) -> Vec<u8> {
+    let sampled: Vec<ChannelRow> = get_50(channels, length);
+
+    let mut message: ChannelMessage = ChannelMessage::default();
+
+    for i in 0..50 {
+        let row: &ChannelRow = &sampled[i];
+
+        let value: i32 = row.id;
+        message.ids.push(value);
+
+        let value = &row.serial;
+        let value: Cow<str> = Cow::from(value);
+
+        message.serials.push(value);
+    }
+
+    println!("Sending channel message {:?}", message);
+
+    let bytes: Vec<u8> = serialize_into_vec(&message)
+        .expect("Could not serialize");
+
+    bytes
 }
 
 fn main() {
