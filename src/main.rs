@@ -31,7 +31,7 @@ pub struct ChannelRow {
 static PORT: u16 = 3334u16;
 static SLEEP: u64 = 7200u64;
 static POSTGRESQL_URL: &'static str = "postgresql://admin@localhost:5432/youtube";
-static QUERY: &'static str = "SELECT id, serial FROM youtube.stats.channels";
+static QUERY: &'static str = "SELECT id, serial FROM youtube.stats.channels ORDER BY id ASC";
 
 pub fn listen() -> TcpListener {
     let ip: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
@@ -78,13 +78,12 @@ pub fn get_rows() -> Vec<ChannelRow> {
 fn get_50(channels: &Vec<ChannelRow>, length: usize) -> Vec<ChannelRow> {
     let mut rng: ThreadRng = thread_rng();
     let amount: usize = 50;
-    let length: usize = if length >= channels.len() {
-        channels.len() - 1
-    } else {
-        length
-    };
 
-    let collect: &[ChannelRow] = &channels[..length];
+    let collect: &[ChannelRow] = if length == channels.len() {
+        &channels
+    } else {
+        &channels[..length]
+    };
     let collect: Vec<ChannelRow> = collect.to_vec();
 
     collect.choose_multiple(&mut rng, amount).cloned().collect()
@@ -150,9 +149,16 @@ fn main() {
 
             let n: u32 = n_option.unwrap();
             println!("Got {}", n);
-            let length: usize = n as usize;
             let channels: &Vec<ChannelRow> = &channels.lock().unwrap();
 
+            let length: usize = n as usize;
+            let length: usize = if length < 50 || length > channels.len() {
+                channels.len()
+            } else {
+                length
+            };
+
+            println!("Using limit {}", length);
             let buf: Vec<u8> = get_msg(channels, length);
             let mut buf: &[u8] = buf.as_slice();
             stream.write_all(&mut buf).unwrap();
