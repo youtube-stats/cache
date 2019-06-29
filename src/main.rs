@@ -31,7 +31,8 @@ pub struct ChannelRow {
 static PORT: u16 = 3334u16;
 static SLEEP: u64 = 7200u64;
 static POSTGRESQL_URL: &'static str = "postgresql://admin@localhost:5432/youtube";
-static QUERY: &'static str = "SELECT ss.id, cc.serial FROM youtube.stats.subs ss INNER JOIN youtube.stats.channels cc ON ss.id = cc.id GROUP BY ss.id, cc.serial ORDER BY last(ss.subs, ss.time) DESC";
+static QUERY_1: &'static str = "SELECT ss.id, cc.serial FROM youtube.stats.subs ss INNER JOIN youtube.stats.channels cc ON ss.id = cc.id GROUP BY ss.id, cc.serial ORDER BY last(ss.subs, ss.time) DESC";
+static QUERY_2: &'static str = "SELECT id, serial FROM youtube.stats.subs ORDER BY id ASC";
 
 pub fn listen() -> TcpListener {
     let ip: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
@@ -53,7 +54,7 @@ pub fn get_rows() -> Vec<ChannelRow> {
         Connection::connect(params, tls)
             .expect("Could not connect to database")
     };
-    let query: &'static str = QUERY;
+    let query: &'static str = QUERY_1;
 
     let results: Rows = conn.query(query, &[])
         .expect("Could not query db");
@@ -70,6 +71,29 @@ pub fn get_rows() -> Vec<ChannelRow> {
 
         rows.push(value);
     }
+
+    let rows = if rows.is_empty() {
+        let query: &'static str = QUERY_2;
+
+        let results: Rows = conn.query(query, &[])
+            .expect("Could not query db");
+
+        let mut rows: Vec<ChannelRow> = Vec::new();
+        for row in &results {
+            let id: i32 = row.get(0);
+            let serial: String = row.get(1);
+
+            let value: ChannelRow = ChannelRow {
+                id,
+                serial
+            };
+
+            rows.push(value);
+        }
+        rows
+    } else {
+        rows
+    };
 
     println!("Retrieved {} rows", rows.len());
     rows
