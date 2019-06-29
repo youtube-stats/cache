@@ -32,7 +32,7 @@ static PORT: u16 = 3334u16;
 static SLEEP: u64 = 7200u64;
 static POSTGRESQL_URL: &'static str = "postgresql://admin@localhost:5432/youtube";
 static QUERY_1: &'static str = "SELECT ss.id, cc.serial FROM youtube.stats.subs ss INNER JOIN youtube.stats.channels cc ON ss.id = cc.id GROUP BY ss.id, cc.serial ORDER BY last(ss.subs, ss.time) DESC";
-static QUERY_2: &'static str = "SELECT id, serial FROM youtube.stats.subs ORDER BY id ASC";
+static QUERY_2: &'static str = "SELECT id, serial FROM youtube.stats.channels ORDER BY id ASC";
 
 pub fn listen() -> TcpListener {
     let ip: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
